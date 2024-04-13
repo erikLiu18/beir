@@ -18,6 +18,7 @@ class SvmSearch(BaseSearch):
         self.batch_size = batch_size
         self.show_progress_bar = kwargs.get("show_progress_bar", True)
         self.convert_to_tensor = kwargs.get("convert_to_tensor", True)
+        self.svm_setting = kwargs.get("svm_setting", True)
         self.results = {}
     
     def search(self, 
@@ -54,15 +55,16 @@ class SvmSearch(BaseSearch):
             convert_to_tensor=self.convert_to_tensor
         ).cpu()
 
-        for i, query_embedding in tqdm(enumerate(query_embeddings), desc='Running SVM for each query'):
+        for i, query_embedding in enumerate(tqdm(query_embeddings, desc='Running SVM for each query')):
             query_id = query_ids[i]
 
             x = np.vstack((query_embedding, corpus_embeddings))
             y = np.zeros(len(corpus) + 1)
             y[0] = 1
-            clf = svm.LinearSVC(class_weight='balanced', verbose=False, max_iter=10000, tol=1e-6, C=0.1, dual='auto')
+            clf = self._get_classifier()
             clf.fit(x, y)
 
+            # Ranking by similarity score
             similarity_scores = clf.decision_function(x)[1:]
             sorted_indices_descending = np.argsort(-similarity_scores)
             sorted_similarity_scores = similarity_scores[sorted_indices_descending]
@@ -76,3 +78,14 @@ class SvmSearch(BaseSearch):
                 self.results[qid][corpus_id] = score
         
         return self.results
+    
+    def _get_classifier(self):
+        svm_type = self.svm_setting['svm_type']
+        if svm_type == 'linearSVC':
+            c = self.svm_setting['c'] if 'c' in self.svm_setting else 0.1
+            clf = svm.LinearSVC(class_weight='balanced', verbose=False, max_iter=10000, tol=1e-6, C=c, dual='auto')
+        elif svm_type == 'SVC':
+            kernel = self.svm_setting['kernel']
+            gamma = self.svm_setting['gamma']
+            clf = svm.SVC(kernel=kernel, gamma=gamma)
+        return clf
