@@ -81,7 +81,7 @@ class SvmSearch(BaseSearch):
     
     def _get_classifier(self):
         svm_type = self.svm_setting['svm_type']
-        if svm_type == 'linearSVC':
+        if svm_type == 'LinearSVC':
             c = self.svm_setting['c'] if 'c' in self.svm_setting else 0.1
             clf = svm.LinearSVC(class_weight='balanced', verbose=False, max_iter=10000, tol=1e-6, C=c, dual='auto')
         elif svm_type == 'SVC':
